@@ -1,171 +1,161 @@
-// const reactInstances = window.__REACT_DEVTOOLS_GLOBAL_HOOK__._renderers;
-// const reactInstance = reactInstances[Object.keys(reactInstances)[0]];
+//branch1 + kevin's code
+// const instances = window.__REACT_DEVTOOLS_GLOBAL_HOOK__._renderers;
+// const reactInstance = instances[Object.keys(instances)[0]];
 // const devTools = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
-// alert(JSON.stringify(reactInstance));
 // let reactDOM;
 
-// devTools.onCommitFiberRoot = (function (original) {
-//   return function(...args) {
-//       reactDOM = args[1];
-//     tester();
-//     return original(...args);
-//   }
-// })(devTools.onCommitFiberRoot);
 
-//Example way of getting state that's an array;
-// function tester () {
-//   let ourState = reactDOM.current.stateNode.current.child.memoizedState;
-//   getState(ourState);
-// }
-  
-// function getState(state) {
-//   for (let key in state) {
-//     if (state[key].constructor === Array) {
-//       let arr = state[key];
-//       for (let i = 0; i < arr.length; i++) {
-//         console.log(arr[i]);
-//     }
-//     }
-//   }
-// }
-
-//async version -- should we check for older browsers?!?!?! or use promises?! Ask Jon.
-// async function tester () {
-//   try {
-//     var state = await reactDOM.current.stateNode.current.child.memoizedState;
-//   } catch(e) {
-//     console.log('error: ' + e);
-//   }
-//   for (let key in state) {
-//     if (state[key].constructor === Array) {
-//       let arr = state[key];
-//       for (let i = 0; i < arr.length; i++) {
-//         console.log(arr[i]);
-//     }
-//     }
-//   }
-// }
-
-//branch1
 const reactInstances = window.__REACT_DEVTOOLS_GLOBAL_HOOK__._renderers;
-const reactInstance = reactInstances[Object.keys(reactInstances)[0]];
+const rid = Object.keys(reactInstances)[0];
+const reactInstance = reactInstances[rid];
 const devTools = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
-let reactDOM;
+
+let fiberDOM;
 let currState;
+let initialState;
+const saveCache = new StateCache();
 
-devTools.onCommitFiberRoot = (function (original) {
-  return function(...args) {
-      reactDOM = args[1];
-			currState = checkReactDOM();
-			console.log('is this running?')
-			getInitialState();    			
-			sendState();
-      return original(...args);
-  }
-})(devTools.onCommitFiberRoot);
-
-
-
-function getInitialState() {
-	console.log('currState', currState);
+// get initial state and only run once
+function getInitialStateOnce() {
+  let run = false;
+  return function getInitialState() {
+    if (!run) {
+      // grab initial state
+      const initStateSet = devTools._fiberRoots[rid];
+      initStateSet.forEach(item => {
+        initialState = item;
+      });
+      // parse state
+      initialState = checkReactDOM(initialState.current.stateNode);
+      // stringify data
+      initialState = stringifyData(initialState);
+      console.log('init', initialState);
+      run = true;
+    }
+  };
 }
 
-//async version -- should we check for older browsers?!?!?! or use promises?! Ask Jon.
-async function sendState() {
-  // try {
-  //   var state = a wait reactDOM.current.stateNode.current.child.memoizedState;
-  // } catch(e) {
-  //   console.log('error: ' + e);
-  // }
-  // for (let key in state) {
-  //   if (state[key].constructor === Array) {
-  //     let arr = state[key];
-  //     for (let i = 0; i < arr.length; i++) {
-  //       // console.log(arr[i]);
-  //   }
-  //   }
-  // }
-  // console.log('currState', currState);
-  var saveCache = new StateCache();
-  // saveCache.addToHead(currState);
-  console.log('before', saveCache);    
-  stateListener(saveCache);
-}
-
-const traverseComp = function (node, cache) {
-
-	//LinkedList Style
-	const component = {
-		name: "", 
-		state: null, 
-		props: null, 
-		children: {}, 
-	};
-
-	//consider using switch/case 
-	if (node.type) {
-		if (node.type.name) {
-			component.name = node.type.name;
-		}
-		else {
-			component.name = node.type || "Default";
-		}
-	}
-
-	if (node.memoizedState) {
-		component.state = node.memoizedState;
-	}
-
-	if (node.memoizedProps) {
-		let props = [];
-		if (typeof node.memoizedProps === "object") {
-			let keys = Object.keys(node.memoizedProps);
-			keys.forEach((key) => {
-				props.push(node.memoizedProps[key])
-			})
-			component.props = props[0] || props; //need to parse the props if it is a function or an array or an object
-		}
-		else {
-			component.props = node.memoizedProps
-		}
-	}
-	
-	if (node._debugID) {
-		cache[node._debugID] = component
-	}
-	else if (!node._debugID) {
-		cache["Default ID"] = component
-	}
-
-	if (node.child !== null) {
-		traverseComp(node.child, component.children)
-	}
-	if (node.sibling !== null) {
-		traverseComp(node.sibling, component.children)
-	}
-}
-
-//check if reactDOM is even valid 
-async function checkReactDOM() {
-	let data = {currentState: null};
-	let cache = {};
-	if (reactDOM) {
-		// console.log(reactDOM.current)
-		traverseComp(reactDOM.current, cache); //maybe there is no need to use stateNode.current
-	}
-	else {
-		return;
-	}
-	data.currentState = cache;
-  console.log("Store with Hierarchy: ", data);
+// convert data to JSON for storage
+function stringifyData(obj) {
+  let box = [];
+  const data = JSON.parse(
+    JSON.stringify(obj, function(key, value) {
+      if (typeof value === 'object' && value !== null) {
+        if (box.indexOf(value) !== -1) {
+          return;
+        }
+        box.push(value);
+      }
+      return value;
+    })
+  );
+  box = null;
   return data;
 }
- 
 
+const setInitialStateOnce = getInitialStateOnce();
 
+// set initial state
+(function setInitialState() {
+  setInitialStateOnce();
+  setTimeout(() => {
+    saveCache.addToHead(initialState);
+    console.log('initial cache', saveCache);
+  }, 100);
+})();
+
+// Monkey patch to listen for state changes
+devTools.onCommitFiberRoot = (function(original) {
+  return function(...args) {
+    getFiberDOM(args[1]);
+    return original(...args);
+  };
+})(devTools.onCommitFiberRoot);
+
+//async version -- should we check for older browsers?!?!?! or use promises?!
+async function getFiberDOM(instance) {
+  try {
+    fiberDOM = await instance;
+    currState = await checkReactDOM(fiberDOM);
+
+    saveCache.addToHead(currState);
+    console.log('updated cache', saveCache);
+  } catch (e) {
+    console.log(e);
+  }
+}
+
+// traverse React 16 fiber DOM
+function traverseComp(node, cache) {
+  //LinkedList Style
+  const component = {
+    name: '',
+    state: null,
+    props: null,
+    children: {},
+  };
+
+  //consider using switch/case
+  if (node.type) {
+    if (node.type.name) {
+      component.name = node.type.name;
+    } else {
+      component.name = node.type || 'Default';
+    }
+  }
+
+  if (node.memoizedState) {
+    component.state = node.memoizedState;
+  }
+
+  if (node.memoizedProps) {
+    let props = [];
+    if (typeof node.memoizedProps === 'object') {
+      let keys = Object.keys(node.memoizedProps);
+      keys.forEach(key => {
+        props.push(node.memoizedProps[key]);
+      });
+      component.props = props[0] || props; //need to parse the props if it is a function or an array or an object
+    } else {
+      component.props = node.memoizedProps;
+    }
+  }
+
+  if (node._debugID) {
+    cache[node._debugID] = component;
+  } else if (!node._debugID) {
+    cache['Default ID'] = component;
+	}
+	
+	component.children = {};
+  if (node.child !== null) {
+    traverseComp(node.child, component.children);
+  }
+  if (node.sibling !== null) {
+    traverseComp(node.sibling, cache);
+  }
+}
+
+//check if reactDOM is even valid
+function checkReactDOM(reactDOM) {
+  let data = { currentState: null };
+  let cache = {};
+  if (reactDOM) {
+    // console.log(reactDOM.current);
+    traverseComp(reactDOM.current, cache); //maybe there is no need to use stateNode.current
+  } else {
+    return;
+  }
+	data.currentState = cache;
+	var customEvent = new CustomEvent("React-Scope-Test", {detail: { //create a custom event to dispatch for actions for requesting data from background
+		data: stringifyData(saveCache)
+	}}); 
+	window.dispatchEvent(customEvent)
+  console.log('Store with Hierarchy: ', data);
+  return data;
+}
 
 //Here we are using a doubly linked list to store state changes
-
 function StateCache() {
   this.head = null;
   this.tail = null;
@@ -178,35 +168,15 @@ function Node(val) {
 }
 
 StateCache.prototype.addToHead = function(value) {
-  const node = new Node(value);
-  if(!this.head) {
-		this.head = this.tail = node;
+  const data = stringifyData(value)
+  const node = new Node(data);
+
+  if (!this.head) {
+    this.head = node;
+    this.tail = node;
   } else {
-		let curr = this.head;
-		this.tail = node;
-		curr.next = node;
-		node.prev = curr;
+    node.prev = this.head;
+    this.head.next = node;
+    this.head = node;
   }
-}
-
-
-function stateListener(cache) {
-  //create stateCache to head of linked list, which contains the initial state upon app start;
-  //listen for state changes 
-  //on state change: 
-  //assign current state to currentState.next;
-  //new state will be currentState (the head)
-  if (cache.head === null) {
-    cache.addToHead(currState);
-  }
-  if (currState !== cache.head) {
-    cache.addToHead(currState);
-  }
-}
-
-// var testCache = new StateCache();
-// testCache.addToHead(1);
-// testCache.addToHead(2);
-// testCache.addToHead(3);
-// console.log(testCache);
-
+};
