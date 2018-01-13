@@ -1,0 +1,58 @@
+body {
+
+}
+
+h1 {
+
+}
+
+h2 {
+
+}
+
+h3 {
+
+}
+
+#stateCard {
+  position: relative;
+  border: 1px solid #4444;
+  width: 300px;
+  min-height: 250px;
+  margin: auto; 
+  padding: 15px;
+  box-shadow: 5px 5px #F4F4F4;
+}
+
+#stateData {
+
+}
+
+#propsData {
+
+}
+
+/* #prevState {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-self: flex-end;
+}
+
+#nextState {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-self: flex-end;
+} */
+
+#buttons {
+  position: absolute;
+  display: flex;
+  /* flex-direction: row; */
+  justify-content: center;
+  /* align-self: flex-end; */
+  bottom: 10px;
+}
+
+

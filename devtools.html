@@ -2,12 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Document</title>
+  <title>React Scope</title>
+  <link rel="stylesheet" type="text/css" href="index.css";
 </head>
 <body>
   <div id=app>
-    <h1>Hello</h1>
+    <article id="stateCard">
+      <h2 id="stateData">State: </h2>
+      <h3 id="propsData">Props: </h2>
+      <div id="buttons">
+        <button id='prevState'>Previous State</button>
+        <button id='nextState'>Next State</button>
+      </div>
+    </article>  
   </div>
   <script src="devtools.js"></script>
+  <script src="index.js"></script>
 </body>
 </html>
