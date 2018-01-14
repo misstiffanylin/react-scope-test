@@ -2,15 +2,8 @@ body {
 
 }
 
-h1 {
-
-}
 
 h2 {
-
-}
-
-h3 {
 
 }
 
@@ -22,6 +15,10 @@ h3 {
   margin: auto; 
   padding: 15px;
   box-shadow: 5px 5px #F4F4F4;
+}
+
+#nameData {
+  
 }
 
 #stateData {
